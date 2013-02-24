@@ -6,8 +6,8 @@ unofficial block based [Lloyds TSB](http://www.lloydstsb.com) API using web scra
 ### Usage
 ```objc
 RRLloydsTSB *lloydsTSB = [[RRLloydsTSB alloc] initWithUser: account
-                                                  password: credentials[@"password"]
-                                                    secret: credentials[@"secret"]];
+                                                  password: password
+                                                    secret: secret];
             
 [lloydsTSB accounts:^(NSDictionary *accounts, NSError *error) {
   NSLog(@"%@", accounts);
