@@ -1,7 +1,7 @@
 RRLloydsTSB
 =================
 
-unofficial block based [Lloyds TSB](http://www.lloydstsb.com) API using web scraping for iOS
+unofficial block based [Lloyds TSB](http://www.lloydstsb.com) API for iOS using web scraping 
 
 ### Usage
 ```objc
