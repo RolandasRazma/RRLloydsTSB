@@ -14,6 +14,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		F009083216DBF8AE00F32834 /* RRLloydsTSBAccountPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RRLloydsTSBAccountPrivate.h; sourceTree = "<group>"; };
 		F019A5E216DA23740045256B /* RRLloydsTSB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RRLloydsTSB.h; sourceTree = "<group>"; };
 		F019A5E316DA23740045256B /* RRLloydsTSB.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RRLloydsTSB.m; sourceTree = "<group>"; };
 		F07EF7A316DA22E500985848 /* libRRLloydsTSB.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libRRLloydsTSB.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -45,6 +46,7 @@
 				F019A5E216DA23740045256B /* RRLloydsTSB.h */,
 				F019A5E316DA23740045256B /* RRLloydsTSB.m */,
 				F0A59F4916DAACC900C9FB3F /* RRLloydsTSBAccount.h */,
+				F009083216DBF8AE00F32834 /* RRLloydsTSBAccountPrivate.h */,
 				F0A59F4A16DAACC900C9FB3F /* RRLloydsTSBAccount.m */,
 			);
 			name = Classes;
