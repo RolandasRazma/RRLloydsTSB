@@ -9,7 +9,23 @@ RRLloydsTSB *lloydsTSB = [[RRLloydsTSB alloc] initWithUser: account
                                                   password: password
                                                     secret: secret];
             
-[lloydsTSB accounts:^(NSDictionary *accounts, NSError *error) {
-  NSLog(@"%@", accounts);
+// List accounts
+[_lloydsTSB accounts:^(NSArray *accounts, NSError *error) {
+                
+    for( RRLloydsTSBAccount *account in accounts ){
+        NSLog(@"accounts: %@", account);
+
+        // Get account statements for past 30 days
+        [_lloydsTSB statementForAccount: account
+                               fromDate: [NSDate dateWithTimeIntervalSinceNow: -86400.0 *30]
+                                 toDate: [NSDate date]
+                      completionHandler: ^(NSArray *statement, NSError *error) {
+                        NSLog(@"%@", statement);
+        }];
+                 
+        break;
+    }
+                
 }];
 ```
+

@@ -62,9 +62,11 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         _user           = user;
         _password       = password;
         _secret         = secret;
-        _dispatchQueue  = dispatch_queue_create("RRLloydsTSBBackground", DISPATCH_QUEUE_CONCURRENT);
+        _dispatchQueue  = dispatch_queue_create("RRLloydsTSBBackground", DISPATCH_QUEUE_SERIAL);
         
-        // NSString *html = [self callURL:[[NSBundle mainBundle] URLForResource:@"" withExtension:nil] method:@"GET" data:nil];
+        /*
+        NSString *html = [self callURL:[[NSBundle mainBundle] URLForResource:@"html.html" withExtension:nil] method:@"GET" data:nil];
+        */
     }
     
     return self;
@@ -72,29 +74,29 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
 
 - (NSError *)connectWithWithUser:(NSString *)user password:(NSString *)password secret:(NSString *)secret {
-    
+
     NSError *error = nil;
     
     @synchronized( self ){
         if( _connected ) return error;
         
-        NSString *html = [self callURL:[NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/logon/login.jsp?mobile=true"] method:@"GET" data:nil];
-        
+        NSString *html = [self callURL:[NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/logon/login.jsp"] method:@"GET" data:nil];
+
         // Parse out password request
         NSMutableDictionary *formData = [[self formDataInHTML:html] mutableCopy];
         if( formData.count ){
-            [formData setObject:_user     forKey:@"frmLogin:strCustomerLogin_userID"];
-            [formData setObject:_password forKey:@"frmLogin:strCustomerLogin_pwd"];
-            
-            html = [self callURL:[NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/mbprimarylogin"] method:@"POST" data:formData];
-            
+            [formData setObject:_user       forKey:@"frmLogin:strCustomerLogin_userID"];
+            [formData setObject:_password   forKey:@"frmLogin:strCustomerLogin_pwd"];
+
+            html = [self callURL:[NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/primarylogin"] method:@"POST" data:formData];
+
             // Parse out secret request
             formData = [[self formDataInHTML:html] mutableCopy];
             if( formData.count ){
                 for( NSString *key in [[formData allKeys] reverseObjectEnumerator] ){
-                    if( ![key matchesPredicateFormat:@".*formMem[0-9]+"] ) continue;
+                    if( ![key matchesPredicateFormat:@".*memInfo[0-9]+"] ) continue;
                     
-                    NSInteger index = [[html stringByMatchingPattern:[NSString stringWithFormat:@"<label\\s+for\\s*=\\s*[\"']%@[\"'][^>]*>(\\d+)[a-z]+:</label>", key] range:1] intValue];
+                    NSInteger index = [[html stringByMatchingPattern:[NSString stringWithFormat:@"<label\\s+for\\s*=\\s*[\"']%@[\"'][^>]*>[ a-zA-Z]*(\\d+)[ a-zA-Z]*:</label>", key] range:1] intValue];
                     
                     NSAssert1(index>0, @"bad index for key %@", key);
                     
@@ -105,10 +107,12 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
                         [formData setObject:@"-" forKey:key];
                     }
                 }
-                
-                html = [self callURL:[NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/useradmin/mobile/logon/entermemorableinformation.jsp"] method:@"POST" data:formData];
-                
-                _connected = [html matchesPredicateFormat:@".*lnkcmd=lnkLogout.*"];
+
+                html = [self callURL:[NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/logon/entermemorableinformation.jsp"] method:@"POST" data:formData];
+
+                // Set connection flag to not make connection next time
+                _connected = ([html matchesPredicateFormat:@".*lnkcmd=lnkLogout.*"] || [html matchesPredicateFormat:@".*lnkcmd=lnkCustomerLogoff.*"]);
+
                 if( !_connected ){
                     error = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Bad secret"}];
                 }
@@ -124,39 +128,39 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 }
 
 
-- (void)accounts:(void (^)(NSDictionary *accounts, NSError *error))accounts {
+- (void)accounts:(void (^)(NSArray *accounts, NSError *error))completionHandler {
 
     dispatch_async(_dispatchQueue, ^{
         NSError *error = nil;
         
         if( !self.isConnected ){
             if( (error = [self connectWithWithUser:_user password:_password secret:_secret]) ) {
-                dispatch_async(dispatch_get_main_queue(), ^{ accounts(nil, error); });
+                dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
                 return;
             }
         }
 
-        NSString *html = [self callURL:[NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/accountenquiry/mobile/viewaccountoverview/viewaccountoverview.jsp?lnkcmd=ltsblogo"] method:@"GET" data:nil];
+        NSString *html = [self callURL:[NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/account_overview_personal/"] method:@"GET" data:nil];
 
         if( html.length ){
-            NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: @"<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccountoverview/[^\"]+NOMINATED_ACCOUNT=([A-Z0-9]+)[^\"]*[\"'][^>]*><strong>(.*?)</strong>"
+            NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: @"<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([A-Z0-9]+)[^\"]*[\"'][^>]*><img[^>]+>([^>]+)</a>"
                                                                                         options: NSRegularExpressionCaseInsensitive
                                                                                           error: NULL];
             
-            NSMutableDictionary *accountsList = [NSMutableDictionary dictionary];
+            NSMutableArray *accountsList = [NSMutableArray array];
             
             NSArray *checkingResults = [inputRegex matchesInString:html options:0 range:NSMakeRange(0, html.length)];
             for ( NSTextCheckingResult *result in checkingResults ) {
-                NSString *accountID    = [html substringWithRange:[result rangeAtIndex:1]];
-                NSString *accountName  = [html substringWithRange:[result rangeAtIndex:2]];
+                NSString *accountUUID  = [html substringWithRange:[result rangeAtIndex:1]];
+                NSString *accountTitle = [html substringWithRange:[result rangeAtIndex:2]];
                 
-                [accountsList setObject:accountName forKey:accountID];
+                [accountsList addObject: [[RRLloydsTSBAccount alloc] initWithUUID:accountUUID title:accountTitle]];
             }
             
-            dispatch_async(dispatch_get_main_queue(), ^{ accounts(accountsList, error); });
+            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(accountsList, error); });
         }else{
             error = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Unknown error"}];
-            dispatch_async(dispatch_get_main_queue(), ^{ accounts(nil, error); });
+            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
         }
 
     });
@@ -164,33 +168,97 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 }
 
 
+- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSArray *statement, NSError *error))completionHandler {
+
+    dispatch_async(_dispatchQueue, ^{
+        NSError *error = nil;
+
+        if( !self.isConnected ){
+            if( (error = [self connectWithWithUser:_user password:_password secret:_secret]) ) {
+                dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+                return;
+            }
+        }
+        
+        NSString *html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewaccount/accountoverviewpersonalbase.jsp"]
+                                method: @"GET"
+                                  data: @{ @"NOMINATED_ACCOUNT": account.UUID,
+                                                      @"lnkcmd": @"frm1:lstAccLst:lkImageRetail1",
+                                                          @"al": @""}];
+
+        html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/ViewProductDetails.jsp"]
+                                method: @"GET"
+                                  data: @{ @"lnkcmd": @"pnlgrpStatement:conS1:lkoverlay", @"al": @""}];
+                
+        NSDateComponents *fromDateComponents = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:fromDate];
+        NSDateComponents *toDateComponents   = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:toDate];        
+        
+        NSMutableDictionary *formData = [[self formDataInHTML:html] mutableCopy];
+        [formData setObject:[NSString stringWithFormat:@"%02d", fromDateComponents.day]     forKey:@"frmTest:dtSearchFromDate"];
+        [formData setObject:[NSString stringWithFormat:@"%02d", fromDateComponents.month]   forKey:@"frmTest:dtSearchFromDate.month"];
+        [formData setObject:[NSString stringWithFormat:@"%i",   fromDateComponents.year]    forKey:@"frmTest:dtSearchFromDate.year"];
+        [formData setObject:[NSString stringWithFormat:@"%02d", toDateComponents.day]       forKey:@"frmTest:dtSearchToDate"];
+        [formData setObject:[NSString stringWithFormat:@"%02d", toDateComponents.month]     forKey:@"frmTest:dtSearchToDate.month"];
+        [formData setObject:[NSString stringWithFormat:@"%i",   toDateComponents.year]      forKey:@"frmTest:dtSearchToDate.year"];
+        
+        [formData setObject:@"Internet banking text/spreadsheet (.CSV)" forKey:@"frmTest:strExportFormatSelected"];
+
+        html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/m44_exportstatement_fallback.jsp"]
+                      method: @"POST"
+                        data: formData];
+        
+        NSMutableArray *statement = [NSMutableArray array];
+        [self parseCSVString:html usingBlock:^(NSDictionary *data) {
+            [statement addObject:data];
+        }];
+        
+        completionHandler( statement, error );
+    });
+    
+ 
+}
+
+
 - (NSString *)callURL:(NSURL *)URL method:(NSString *)method data:(NSDictionary *)data {
     
-    NSMutableString *html = nil;
+    NSMutableString   *html         = nil;
+    NSHTTPURLResponse *urlResponse  = nil;
     
     if( URL.isFileURL ){
         html = [NSMutableString stringWithContentsOfURL:URL encoding:NSUTF8StringEncoding error:NULL];
     }else{
-        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:URL];
-        [request setHTTPMethod: method];
-        [request addValue:@"Mozilla/5.0 (iPhone; en-us) Mobile RRFinance" forHTTPHeaderField:@"User-Agent"];
-        [request addValue:@"text/html;*/*" forHTTPHeaderField:@"Accept"];
-        
+        NSMutableURLRequest *request = nil;
+
+        // Build NSMutableURLRequest
         if( data.count ){
             NSMutableString *query = [NSMutableString string];
             [data enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, BOOL *stop) {
                 if( query.length ) [query appendString:@"&"];
-                [query appendFormat: @"%@=%@", [key stringByAddingPercentEscapes], (([value isKindOfClass:[NSNull class]])?@"":[value stringByAddingPercentEscapes])];
+                [query appendFormat: @"%@=%@", [key stringByAddingPercentEscapes], (([value isKindOfClass:[NSNull class]])?@"":[[value description] stringByAddingPercentEscapes])];
             }];
             
-            if( [method isEqualToString:@"POST"] ){
+            if( [method isEqualToString:@"GET"] ){
+                NSString *absoluteURLString = URL.absoluteString;
+                absoluteURLString = [absoluteURLString stringByAppendingFormat: ([absoluteURLString containsString:@"?"]?@"&%@":@"?%@"), query];
+
+                request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:absoluteURLString]];
+            }else if( [method isEqualToString:@"POST"] ){
+                request = [NSMutableURLRequest requestWithURL:URL];
                 [request addValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
                 [request setHTTPBody:[query dataUsingEncoding:NSUTF8StringEncoding]];
+            }else{
+                NSAssert(NO, @"Unknown method");
             }
+        }else{
+            request = [NSMutableURLRequest requestWithURL:URL];
         }
         
+        [request setHTTPMethod: method];
+        [request addValue:@"Mozilla/5.0 (en-us) Gecko/x" forHTTPHeaderField:@"User-Agent"];
+        [request addValue:@"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" forHTTPHeaderField:@"Accept"];
+
+        // Query server
         NSError *requestError = nil;
-        NSHTTPURLResponse *urlResponse = nil;
         
         NSData *response = [NSURLConnection sendSynchronousRequest:request returningResponse:&urlResponse error:&requestError];
         
@@ -200,10 +268,14 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
             NSLog(@"err %@ %@", requestError, urlResponse);
         }
     }
-    
-    [html replaceOccurrencesOfString:@"\n"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
-    [html replaceOccurrencesOfString:@"\r"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
-    [html replaceOccurrencesOfString:@">\\s+<"  withString:@"><" options:NSRegularExpressionSearch range:NSMakeRange(0, html.length)];
+
+    // Cleanup HTML for easyer parsing
+    if( html.length && urlResponse && [[[urlResponse allHeaderFields] objectForKey:@"Content-Type"] containsString:@"text/htm"] ){
+        [html replaceOccurrencesOfString:@"\r"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
+        [html replaceOccurrencesOfString:@"\n"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
+        [html replaceOccurrencesOfString:@"\t"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
+        [html replaceOccurrencesOfString:@">\\s+<"  withString:@"><" options:NSRegularExpressionSearch range:NSMakeRange(0, html.length)];
+    }
     
     return html;
 }
@@ -213,7 +285,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
     
     HTML = [HTML stringByMatchingPattern:@"<form.*?form>"];
     
-    NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: @"<(input|select)[^>]+name\\s*=\\s*[\"']([^\"]+)[\"'][^>]+>"
+    NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: @"<(input|select)[^>]+name\\s*=\\s*[\"']([^\"]+)[\"'][^>]*>"
                                                                                 options: NSRegularExpressionCaseInsensitive
                                                                                   error: NULL];
     
@@ -237,8 +309,45 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         [formData setObject:(inputValue?inputValue:[NSNull null]) forKey:inputName];
     }
     
+    // we will newer use cancel
+    [formData removeObjectForKey:@"frmTest:btnCancel"];
+    
     return formData;
     
+}
+
+
+- (BOOL)parseCSVString:(NSString *)string usingBlock:(void (^)(NSDictionary *data))block {
+
+    NSArray *keys = nil;
+    
+    NSCharacterSet *newlineCharacterSet = [NSCharacterSet newlineCharacterSet];
+    
+    NSScanner *lineScanner = [NSScanner scannerWithString:string];
+    [lineScanner setCharactersToBeSkipped:newlineCharacterSet];
+    
+    NSString *newLine;
+    while ( [lineScanner scanUpToCharactersFromSet:newlineCharacterSet intoString:&newLine] || ![lineScanner isAtEnd] ) {
+        NSMutableArray *lineData = [[newLine componentsSeparatedByString:@","] mutableCopy];
+        if( !keys ){
+            keys = lineData;
+            continue;
+        }
+
+        NSAssert(keys.count>=lineData.count, @"less keys than data?");
+        
+        if( lineData.count < keys.count ){
+            [lineData addObject:@""];
+        }
+
+        NSMutableDictionary *data = [NSMutableDictionary dictionaryWithObjects:lineData forKeys:keys];
+        [data removeObjectForKey:@""];
+        
+        block( data );
+    }
+    
+    
+    return YES;
 }
 
 

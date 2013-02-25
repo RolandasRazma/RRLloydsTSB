@@ -1,5 +1,5 @@
 //
-//  RRLloydsTSB.h
+//  RRLloydsTSBAccount.m
 //  RRLloydsTSB
 //
 //  Created by Rolandas Razma on 24/02/2013.
@@ -24,19 +24,35 @@
 //  SOFTWARE.
 //
 
-#import <Foundation/Foundation.h>
 #import "RRLloydsTSBAccount.h"
 
 
-NSString * const RRLloydsTSBErrorDomain;
+@implementation RRLloydsTSBAccount {
+    NSString *_UUID;
+    NSString *_title;
+}
 
 
-@interface RRLloydsTSB : NSObject
+#pragma mark -
+#pragma mark NSObject
 
-@property(nonatomic, readonly, getter=isConnected) BOOL connected;
 
-- (id)initWithUser:(NSString *)user password:(NSString *)password secret:(NSString *)secret;
-- (void)accounts:(void (^)(NSArray *accounts, NSError *error))completionHandler;
-- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSArray *statement, NSError *error))completionHandler;
+- (NSString *)description {
+    return [NSString stringWithFormat: @"<%@: %p | UUID = %@ | title = %@>", [self class], self, _UUID, _title];
+}
+
+
+#pragma mark -
+#pragma mark RRLloydsTSBAccount
+
+
+- (id)initWithUUID:(NSString *)UUID title:(NSString *)title {
+    if( (self = [self init]) ){
+        _UUID   = UUID;
+        _title  = title;
+    }
+    return self;
+}
+
 
 @end

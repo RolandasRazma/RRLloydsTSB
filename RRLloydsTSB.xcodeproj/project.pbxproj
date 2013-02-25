@@ -10,6 +10,7 @@
 		F019A5E516DA23740045256B /* RRLloydsTSB.m in Sources */ = {isa = PBXBuildFile; fileRef = F019A5E316DA23740045256B /* RRLloydsTSB.m */; };
 		F07EF7A716DA22E500985848 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F07EF7A616DA22E500985848 /* Foundation.framework */; };
 		F0A59F4616DA7A9900C9FB3F /* NSString+LWAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = F0A59F4416DA7A9900C9FB3F /* NSString+LWAdditions.m */; };
+		F0A59F4B16DAACC900C9FB3F /* RRLloydsTSBAccount.m in Sources */ = {isa = PBXBuildFile; fileRef = F0A59F4A16DAACC900C9FB3F /* RRLloydsTSBAccount.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +21,9 @@
 		F07EF7AA16DA22E500985848 /* Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Prefix.pch; sourceTree = "<group>"; };
 		F0A59F4316DA7A9900C9FB3F /* NSString+LWAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+LWAdditions.h"; sourceTree = "<group>"; };
 		F0A59F4416DA7A9900C9FB3F /* NSString+LWAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+LWAdditions.m"; sourceTree = "<group>"; };
+		F0A59F4916DAACC900C9FB3F /* RRLloydsTSBAccount.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RRLloydsTSBAccount.h; sourceTree = "<group>"; };
+		F0A59F4A16DAACC900C9FB3F /* RRLloydsTSBAccount.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RRLloydsTSBAccount.m; sourceTree = "<group>"; };
+		F0A59F4C16DAAD6C00C9FB3F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,6 +44,8 @@
 				F0A59F3316DA76A900C9FB3F /* Support */,
 				F019A5E216DA23740045256B /* RRLloydsTSB.h */,
 				F019A5E316DA23740045256B /* RRLloydsTSB.m */,
+				F0A59F4916DAACC900C9FB3F /* RRLloydsTSBAccount.h */,
+				F0A59F4A16DAACC900C9FB3F /* RRLloydsTSBAccount.m */,
 			);
 			name = Classes;
 			path = RRLloydsTSB/Classes;
@@ -61,6 +67,7 @@
 				F07EF7A916DA22E500985848 /* Supporting Files */,
 				F019A5E416DA23740045256B /* Frameworks & Librarys */,
 				F07EF7A416DA22E500985848 /* Products */,
+				F0A59F4C16DAAD6C00C9FB3F /* README.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -160,6 +167,7 @@
 			files = (
 				F019A5E516DA23740045256B /* RRLloydsTSB.m in Sources */,
 				F0A59F4616DA7A9900C9FB3F /* NSString+LWAdditions.m in Sources */,
+				F0A59F4B16DAACC900C9FB3F /* RRLloydsTSBAccount.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
