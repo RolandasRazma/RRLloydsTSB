@@ -26,7 +26,7 @@
 #import "NSString+LWAdditions.h"
 
 
-@implementation NSString (UDAdditions)
+@implementation NSString (LWAdditions)
 
 
 - (NSString *)stringByAddingPercentEscapes {

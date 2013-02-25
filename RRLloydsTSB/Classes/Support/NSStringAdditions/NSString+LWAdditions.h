@@ -26,7 +26,7 @@
 #import <Foundation/Foundation.h>
 
 
-@interface NSString (UDAdditions)
+@interface NSString (LWAdditions)
 
 - (NSString *)stringByAddingPercentEscapes;
 - (NSString *)stringByReplacingPercentEscapes;
