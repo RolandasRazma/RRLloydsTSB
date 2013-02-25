@@ -25,11 +25,15 @@
 //
 
 #import "RRLloydsTSBAccount.h"
+#import "RRLloydsTSBAccountPrivate.h"
 
 
 @implementation RRLloydsTSBAccount {
-    NSString *_UUID;
-    NSString *_title;
+    NSString        *_UUID;
+    NSString        *_title;
+    NSString        *_shortCode;
+    NSString        *_accountNumber;
+    NSDecimalNumber *_balance;
 }
 
 
@@ -46,10 +50,9 @@
 #pragma mark RRLloydsTSBAccount
 
 
-- (id)initWithUUID:(NSString *)UUID title:(NSString *)title {
+- (id)initWithUUID:(NSString *)UUID {
     if( (self = [self init]) ){
         _UUID   = UUID;
-        _title  = title;
     }
     return self;
 }

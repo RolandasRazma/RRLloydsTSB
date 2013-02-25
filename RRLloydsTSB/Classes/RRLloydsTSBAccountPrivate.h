@@ -30,6 +30,11 @@
 
 @interface RRLloydsTSBAccount ()
 
-- (id)initWithUUID:(NSString *)UUID title:(NSString *)title;
+@property(nonatomic, copy) NSString *title;
+@property(nonatomic, copy) NSString *shortCode;
+@property(nonatomic, copy) NSString *accountNumber;
+@property(nonatomic, copy) NSDecimalNumber *balance;
+
+- (id)initWithUUID:(NSString *)UUID;
 
 @end

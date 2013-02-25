@@ -140,18 +140,38 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         NSString *html = [self callURL:[NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/account_overview_personal/"] method:@"GET" data:nil];
 
         if( html.length ){
-            NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: @"<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([A-Z0-9]+)[^\"]*[\"'][^>]*><img[^>]+>([^>]+)</a>"
-                                                                                        options: NSRegularExpressionCaseInsensitive
-                                                                                          error: NULL];
-            
             NSMutableArray *accountsList = [NSMutableArray array];
             
-            NSArray *checkingResults = [inputRegex matchesInString:html options:0 range:NSMakeRange(0, html.length)];
+            NSArray *checkingResults = [html matchesForPattern: @"accountDetails.*?<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([a-z0-9]+)[^\"]*[\"'][^>]*>\\s*<img[^>]+>([^>]+)</a>.*?>\\s*Sort\\s+Code[^>]+>([^<]+).*?Account\\s+Number[^>]+>([^<]+).*?accountBalance.*?>\\s*Balance\\s*<[^>]+>([^<]+)"];
             for ( NSTextCheckingResult *result in checkingResults ) {
-                NSString *accountUUID  = [html substringWithRange:[result rangeAtIndex:1]];
-                NSString *accountTitle = [html substringWithRange:[result rangeAtIndex:2]];
                 
-                [accountsList addObject: [[RRLloydsTSBAccount alloc] initWithUUID:accountUUID title:accountTitle]];
+                RRLloydsTSBAccount *lloydsTSBAccount = [[RRLloydsTSBAccount alloc] initWithUUID: [[html substringWithRange:[result rangeAtIndex:1]] trimmedString]];
+                
+                // Title
+                [lloydsTSBAccount setTitle: [[html substringWithRange:[result rangeAtIndex:2]] trimmedString]];
+                
+                // Short Code
+                [lloydsTSBAccount setShortCode: [[html substringWithRange:[result rangeAtIndex:3]] trimmedString]];
+                
+                // Account Number
+                [lloydsTSBAccount setAccountNumber: [[html substringWithRange:[result rangeAtIndex:4]] trimmedString]];
+                
+                // Balance
+                NSString *accountBalance = [[html substringWithRange:[result rangeAtIndex:5]] trimmedString];
+                accountBalance = [accountBalance stringByReplacingOccurrencesOfString: @"[^\\d.]"
+                                                                           withString: @""
+                                                                              options: NSRegularExpressionSearch
+                                                                                range: NSMakeRange(0, accountBalance.length)];
+                
+                NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+                [numberFormatter setNumberStyle:NSNumberFormatterDecimalStyle];
+                [numberFormatter setGeneratesDecimalNumbers:YES];
+                NSNumber *balance = [numberFormatter numberFromString:accountBalance];
+                [lloydsTSBAccount setBalance: (NSDecimalNumber *)(balance?balance:[NSDecimalNumber numberWithInt:0])];
+
+                // Add to list
+                [accountsList addObject: lloydsTSBAccount];
+                
             }
             
             dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(accountsList, error); });

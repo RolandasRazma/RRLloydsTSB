@@ -31,5 +31,8 @@
 
 @property(nonatomic, readonly) NSString *UUID;
 @property(nonatomic, readonly) NSString *title;
+@property(nonatomic, readonly) NSString *shortCode;
+@property(nonatomic, readonly) NSString *accountNumber;
+@property(nonatomic, readonly) NSDecimalNumber *balance;
 
 @end
