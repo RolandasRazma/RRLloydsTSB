@@ -13,7 +13,7 @@ RRLloydsTSB *lloydsTSB = [[RRLloydsTSB alloc] initWithUser: account
 [_lloydsTSB accounts:^(NSArray *accounts, NSError *error) {
                 
     for( RRLloydsTSBAccount *account in accounts ){
-        NSLog(@"accounts: %@", account);
+        NSLog(@"accounts\n\tTitle: %@\n\tShort Code: %@\n\tAccount Number: %@\n\tBalance: £%@", account.title, account.shortCode, account.accountNumber, account.balance);
 
         // Get account statements for past 30 days
         [_lloydsTSB statementForAccount: account
