@@ -29,11 +29,6 @@
 @implementation NSString (UDAdditions)
 
 
-- (BOOL)containsString:(NSString *)string {
-    return ([self rangeOfString:string].location != NSNotFound);
-}
-
-
 - (NSString *)stringByAddingPercentEscapes {
     return (__bridge_transfer NSString *)CFURLCreateStringByAddingPercentEscapes(NULL, (__bridge CFStringRef)self, NULL, CFSTR("!*’();:@&=+$,/?%#[]"), kCFStringEncodingUTF8);
 }
@@ -44,6 +39,11 @@
                                                                                                  (__bridge CFStringRef)[self stringByReplacingOccurrencesOfString:@"+" withString:@" "],
                                                                                                  CFSTR(" "),
                                                                                                  kCFStringEncodingUTF8);
+}
+
+
+- (BOOL)containsString:(NSString *)string {
+    return ([self rangeOfString:string].location != NSNotFound);
 }
 
 
@@ -58,18 +58,31 @@
 
 
 - (NSString *)stringByMatchingPattern:(NSString *)pattern range:(NSUInteger)range {
-    NSError *error = nil;
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern: pattern
-                                                                           options: 0
-                                                                             error: &error];
     
-    NSTextCheckingResult *match = [regex firstMatchInString:self options:NSMatchingReportCompletion range:NSMakeRange(0, self.length)];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern: pattern
+                                                                           options: ( NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines )
+                                                                             error: NULL];
+    
+    NSTextCheckingResult *match = [regex firstMatchInString: self
+                                                    options: NSMatchingReportCompletion
+                                                      range: NSMakeRange(0, self.length)];
     
     if( match.range.location != NSNotFound ){
         return [self substringWithRange: [match rangeAtIndex:range]];
     }
     
     return nil;
+}
+
+
+- (NSArray *)matchesForPattern:(NSString *)pattern {
+    NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: pattern
+                                                                                options: ( NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines )
+                                                                                  error: NULL];
+    
+    return [inputRegex matchesInString: self
+                               options: NSMatchingReportCompletion
+                                 range: NSMakeRange(0, self.length)];
 }
 
 

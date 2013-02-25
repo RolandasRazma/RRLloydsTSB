@@ -28,12 +28,13 @@
 
 @interface NSString (UDAdditions)
 
-- (BOOL)containsString:(NSString *)string;
 - (NSString *)stringByAddingPercentEscapes;
 - (NSString *)stringByReplacingPercentEscapes;
+- (BOOL)containsString:(NSString *)string;
 - (BOOL)matchesPredicateFormat:(NSString *)predicateFormat;
 - (NSString *)stringByMatchingPattern:(NSString *)pattern;
 - (NSString *)stringByMatchingPattern:(NSString *)pattern range:(NSUInteger)range;
 - (BOOL)parseCSVUsingBlock:(void (^)(NSDictionary *data))block;
+- (NSArray *)matchesForPattern:(NSString *)pattern;
 
 @end
