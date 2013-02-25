@@ -25,10 +25,12 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "RRLloydsTSBAccount.h"
 
 
 NSString * const RRLloydsTSBErrorDomain;
+
+
+@class RRLloydsTSBAccount;
 
 
 @interface RRLloydsTSB : NSObject

@@ -26,6 +26,7 @@
 
 #import "RRLloydsTSB.h"
 #import "NSString+LWAdditions.h"
+#import "RRLloydsTSBAccountPrivate.h"
 
 
 NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
@@ -63,10 +64,6 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         _password       = password;
         _secret         = secret;
         _dispatchQueue  = dispatch_queue_create("RRLloydsTSBBackground", DISPATCH_QUEUE_SERIAL);
-        
-        /*
-        NSString *html = [self callURL:[[NSBundle mainBundle] URLForResource:@"html.html" withExtension:nil] method:@"GET" data:nil];
-        */
     }
     
     return self;
@@ -286,11 +283,11 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
     HTML = [HTML stringByMatchingPattern:@"<form.*?form>"];
     
     NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: @"<(input|select)[^>]+name\\s*=\\s*[\"']([^\"]+)[\"'][^>]*>"
-                                                                                options: NSRegularExpressionCaseInsensitive
+                                                                                options: NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines
                                                                                   error: NULL];
     
     NSRegularExpression *valueRegex = [NSRegularExpression regularExpressionWithPattern: @"value\\s*=\\s*[\"']([^\"]+)[\"']"
-                                                                                options: NSRegularExpressionCaseInsensitive
+                                                                                options: NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines
                                                                                   error: NULL];
     
     NSMutableDictionary *formData = [NSMutableDictionary dictionary];

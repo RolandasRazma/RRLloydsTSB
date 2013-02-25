@@ -32,6 +32,4 @@
 @property(nonatomic, readonly) NSString *UUID;
 @property(nonatomic, readonly) NSString *title;
 
-- (id)initWithUUID:(NSString *)UUID title:(NSString *)title;
-
 @end
