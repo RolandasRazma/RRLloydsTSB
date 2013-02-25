@@ -34,5 +34,6 @@
 - (BOOL)matchesPredicateFormat:(NSString *)predicateFormat;
 - (NSString *)stringByMatchingPattern:(NSString *)pattern;
 - (NSString *)stringByMatchingPattern:(NSString *)pattern range:(NSUInteger)range;
+- (BOOL)parseCSVUsingBlock:(void (^)(NSDictionary *data))block;
 
 @end

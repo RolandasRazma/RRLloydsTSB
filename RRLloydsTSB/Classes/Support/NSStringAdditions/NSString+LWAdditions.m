@@ -73,4 +73,38 @@
 }
 
 
+- (BOOL)parseCSVUsingBlock:(void (^)(NSDictionary *data))block {
+    
+    NSArray *keys = nil;
+    
+    NSCharacterSet *newlineCharacterSet = [NSCharacterSet newlineCharacterSet];
+    
+    NSScanner *lineScanner = [NSScanner scannerWithString:self];
+    [lineScanner setCharactersToBeSkipped:newlineCharacterSet];
+    
+    NSString *newLine;
+    while ( [lineScanner scanUpToCharactersFromSet:newlineCharacterSet intoString:&newLine] || ![lineScanner isAtEnd] ) {
+        NSMutableArray *lineData = [[newLine componentsSeparatedByString:@","] mutableCopy];
+        if( !keys ){
+            keys = lineData;
+            continue;
+        }
+        
+        NSAssert(keys.count>=lineData.count, @"less keys than data?");
+        
+        if( lineData.count < keys.count ){
+            [lineData addObject:@""];
+        }
+        
+        NSMutableDictionary *data = [NSMutableDictionary dictionaryWithObjects:lineData forKeys:keys];
+        [data removeObjectForKey:@""];
+        
+        block( data );
+    }
+    
+    
+    return YES;
+}
+
+
 @end
