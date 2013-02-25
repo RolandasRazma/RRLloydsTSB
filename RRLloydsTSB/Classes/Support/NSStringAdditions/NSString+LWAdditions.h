@@ -36,5 +36,6 @@
 - (NSString *)stringByMatchingPattern:(NSString *)pattern range:(NSUInteger)range;
 - (BOOL)parseCSVUsingBlock:(void (^)(NSDictionary *data))block;
 - (NSArray *)matchesForPattern:(NSString *)pattern;
+- (NSString *)trimmedString;
 
 @end

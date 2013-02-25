@@ -42,6 +42,11 @@
 }
 
 
+- (NSString *)trimmedString {
+    return [self stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+}
+
+
 - (BOOL)containsString:(NSString *)string {
     return ([self rangeOfString:string].location != NSNotFound);
 }
