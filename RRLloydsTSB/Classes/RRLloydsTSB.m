@@ -142,38 +142,37 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         if( html.length ){
             NSMutableArray *accountsList = [NSMutableArray array];
             
-            NSArray *checkingResults = [html matchesForPattern: @"accountDetails.*?<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([a-z0-9]+)[^\"]*[\"'][^>]*>\\s*<img[^>]+>([^>]+)</a>.*?>\\s*Sort\\s+Code[^>]+>([^<]+).*?Account\\s+Number[^>]+>([^<]+).*?accountBalance.*?>\\s*Balance\\s*<[^>]+>([^<]+)"];
-            for ( NSTextCheckingResult *result in checkingResults ) {
-                
-                RRLloydsTSBAccount *lloydsTSBAccount = [[RRLloydsTSBAccount alloc] initWithUUID: [[html substringWithRange:[result rangeAtIndex:1]] trimmedString]];
-                
-                // Title
-                [lloydsTSBAccount setTitle: [[html substringWithRange:[result rangeAtIndex:2]] trimmedString]];
-                
-                // Short Code
-                [lloydsTSBAccount setShortCode: [[html substringWithRange:[result rangeAtIndex:3]] trimmedString]];
-                
-                // Account Number
-                [lloydsTSBAccount setAccountNumber: [[html substringWithRange:[result rangeAtIndex:4]] trimmedString]];
-                
-                // Balance
-                NSString *accountBalance = [[html substringWithRange:[result rangeAtIndex:5]] trimmedString];
-                accountBalance = [accountBalance stringByReplacingOccurrencesOfString: @"[^\\d.]"
-                                                                           withString: @""
-                                                                              options: NSRegularExpressionSearch
-                                                                                range: NSMakeRange(0, accountBalance.length)];
-                
-                NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-                [numberFormatter setNumberStyle:NSNumberFormatterDecimalStyle];
-                [numberFormatter setGeneratesDecimalNumbers:YES];
-                NSNumber *balance = [numberFormatter numberFromString:accountBalance];
-                [lloydsTSBAccount setBalance: (NSDecimalNumber *)(balance?balance:[NSDecimalNumber numberWithInt:0])];
+            [html enumerateMatchesForPattern: @"accountDetails.*?<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([a-z0-9]+)[^\"]*[\"'][^>]*>\\s*<img[^>]+>([^>]+)</a>.*?>\\s*Sort\\s+Code[^>]+>([^<]+).*?Account\\s+Number[^>]+>([^<]+).*?accountBalance.*?>\\s*Balance\\s*<[^>]+>([^<]+)"
+                                  usingBlock: ^(NSTextCheckingResult *checkingResult, BOOL *stop) {
+                                      
+                                      RRLloydsTSBAccount *lloydsTSBAccount = [[RRLloydsTSBAccount alloc] initWithUUID: [[html substringWithRange:[checkingResult rangeAtIndex:1]] trimmedString]];
+                                      
+                                      // Title
+                                      [lloydsTSBAccount setTitle: [[html substringWithRange:[checkingResult rangeAtIndex:2]] trimmedString]];
+                                      
+                                      // Short Code
+                                      [lloydsTSBAccount setShortCode: [[html substringWithRange:[checkingResult rangeAtIndex:3]] trimmedString]];
+                                      
+                                      // Account Number
+                                      [lloydsTSBAccount setAccountNumber: [[html substringWithRange:[checkingResult rangeAtIndex:4]] trimmedString]];
+                                      
+                                      // Balance
+                                      NSString *accountBalance = [[html substringWithRange:[checkingResult rangeAtIndex:5]] trimmedString];
+                                      accountBalance = [accountBalance stringByReplacingOccurrencesOfString: @"[^\\d.]"
+                                                                                                 withString: @""
+                                                                                                    options: NSRegularExpressionSearch
+                                                                                                      range: NSMakeRange(0, accountBalance.length)];
+                                      
+                                      NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+                                      [numberFormatter setNumberStyle:NSNumberFormatterDecimalStyle];
+                                      [numberFormatter setGeneratesDecimalNumbers:YES];
+                                      NSNumber *balance = [numberFormatter numberFromString:accountBalance];
+                                      [lloydsTSBAccount setBalance: (NSDecimalNumber *)(balance?balance:[NSDecimalNumber numberWithInt:0])];
+                                      
+                                      // Add to list
+                                      [accountsList addObject: lloydsTSBAccount];
+                                  }];
 
-                // Add to list
-                [accountsList addObject: lloydsTSBAccount];
-                
-            }
-            
             dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(accountsList, error); });
         }else{
             error = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Unknown error"}];
@@ -206,19 +205,18 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/ViewProductDetails.jsp"]
                                 method: @"GET"
                                   data: @{ @"lnkcmd": @"pnlgrpStatement:conS1:lkoverlay", @"al": @""}];
-                
+
         NSDateComponents *fromDateComponents = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:fromDate];
         NSDateComponents *toDateComponents   = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:toDate];        
         
         NSMutableDictionary *formData = [[self formDataInHTML:html] mutableCopy];
-        [formData setObject:[NSString stringWithFormat:@"%02d", fromDateComponents.day]     forKey:@"frmTest:dtSearchFromDate"];
-        [formData setObject:[NSString stringWithFormat:@"%02d", fromDateComponents.month]   forKey:@"frmTest:dtSearchFromDate.month"];
-        [formData setObject:[NSString stringWithFormat:@"%i",   fromDateComponents.year]    forKey:@"frmTest:dtSearchFromDate.year"];
-        [formData setObject:[NSString stringWithFormat:@"%02d", toDateComponents.day]       forKey:@"frmTest:dtSearchToDate"];
-        [formData setObject:[NSString stringWithFormat:@"%02d", toDateComponents.month]     forKey:@"frmTest:dtSearchToDate.month"];
-        [formData setObject:[NSString stringWithFormat:@"%i",   toDateComponents.year]      forKey:@"frmTest:dtSearchToDate.year"];
-        
-        [formData setObject:@"Internet banking text/spreadsheet (.CSV)" forKey:@"frmTest:strExportFormatSelected"];
+        formData[@"frmTest:dtSearchFromDate"]       = [NSString stringWithFormat:@"%02d", fromDateComponents.day];
+        formData[@"frmTest:dtSearchFromDate.month"] = [NSString stringWithFormat:@"%02d", fromDateComponents.month];
+        formData[@"frmTest:dtSearchFromDate.year"]  = [NSString stringWithFormat:@"%i",   fromDateComponents.year];
+        formData[@"frmTest:dtSearchToDate"]         = [NSString stringWithFormat:@"%02d", toDateComponents.day];
+        formData[@"frmTest:dtSearchToDate.month"]   = [NSString stringWithFormat:@"%02d", toDateComponents.month];
+        formData[@"frmTest:dtSearchToDate.year"]    = [NSString stringWithFormat:@"%i",   toDateComponents.year];
+        formData[@"frmTest:strExportFormatSelected"]= @"Internet banking text/spreadsheet (.CSV)";
 
         html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/m44_exportstatement_fallback.jsp"]
                       method: @"POST"
@@ -299,33 +297,68 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
 
 - (NSDictionary *)formDataInHTML:(NSString *)HTML {
+
+    NSMutableDictionary *formData = [NSMutableDictionary dictionary];
     
-    HTML = [HTML stringByMatchingPattern:@"<form.*?form>"];
-    
-    NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: @"<(input|select)[^>]+name\\s*=\\s*[\"']([^\"]+)[\"'][^>]*>"
-                                                                                options: NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines
-                                                                                  error: NULL];
-    
+    HTML = [HTML stringByMatchingPattern:@"<form.*?</form>"];
+
+    // Inputs
     NSRegularExpression *valueRegex = [NSRegularExpression regularExpressionWithPattern: @"value\\s*=\\s*[\"']([^\"]+)[\"']"
                                                                                 options: NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines
                                                                                   error: NULL];
+
+    [HTML enumerateMatchesForPattern: @"<input\\s+[^>]+name\\s*=\\s*[\"']([^\"]+)[\"'][^>]*>"
+                          usingBlock: ^(NSTextCheckingResult *checkingResult, BOOL *stop) {
+                              
+                              NSString *outerHTML  = [HTML substringWithRange:[checkingResult rangeAtIndex:0]];
+                              NSString *inputName  = [HTML substringWithRange:[checkingResult rangeAtIndex:1]];
+                              NSString *inputValue = nil;
+                              
+                              NSTextCheckingResult *match = [valueRegex firstMatchInString:outerHTML options:NSMatchingReportCompletion range:NSMakeRange(0, outerHTML.length)];
+                              if( match.range.location != NSNotFound ){
+                                  inputValue = [outerHTML substringWithRange:[match rangeAtIndex:1]];
+                              }
+                              
+                              [formData setObject:(inputValue?inputValue:[NSNull null]) forKey:inputName];
+                              
+                          }];
+
+    // Selects @"<option([^>]*)>(.*?)</option>"
+    NSRegularExpression *optionRegex = [NSRegularExpression regularExpressionWithPattern: @"<option(\\s*value=\"([^\"]+)\")*(\\s*selected)*>(.*?)</option>"
+                                                                                 options: ( NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines )
+                                                                                   error: NULL];
     
-    NSMutableDictionary *formData = [NSMutableDictionary dictionary];
-    
-    NSArray *checkingResults = [inputRegex matchesInString:HTML options:0 range:NSMakeRange(0, HTML.length)];
-    for ( NSTextCheckingResult *result in checkingResults ) {
-        NSString *inputHTML  = [HTML substringWithRange:[result rangeAtIndex:0]];
-        NSString *inputName  = [HTML substringWithRange:[result rangeAtIndex:2]];
-        NSString *inputValue = nil;
-        
-        NSTextCheckingResult *match = [valueRegex firstMatchInString:inputHTML options:NSMatchingReportCompletion range:NSMakeRange(0, inputHTML.length)];
-        if( match.range.location != NSNotFound ){
-            inputValue = [inputHTML substringWithRange:[match rangeAtIndex:1]];
-        }
-        
-        [formData setObject:(inputValue?inputValue:[NSNull null]) forKey:inputName];
-    }
-    
+    [HTML enumerateMatchesForPattern: @"<select[^>]+name\\s*=\\s*[\"']([^\"]+)[\"'][^>]*>(.*?)</select>"
+                          usingBlock: ^(NSTextCheckingResult *selects, BOOL *stop) {
+                              NSString *outerHTML  = [HTML substringWithRange:[selects rangeAtIndex:0]];
+                              NSString *selectName = [HTML substringWithRange:[selects rangeAtIndex:1]];
+
+                              NSArray *checkingResults = [optionRegex matchesInString: outerHTML
+                                                                             options: NSMatchingReportCompletion
+                                                                               range: NSMakeRange(0, outerHTML.length)];
+                              
+                              [checkingResults enumerateObjectsUsingBlock: ^(NSTextCheckingResult *options, NSUInteger index, BOOL *stop) {
+                                  NSString *optionValue;
+                                  
+                                  NSRange range = [options rangeAtIndex:2];
+                                  if( range.location != NSNotFound ){
+                                      optionValue = [[outerHTML substringWithRange:range] trimmedString];
+                                  }else{
+                                      optionValue = [[outerHTML substringWithRange:[options rangeAtIndex:4]] trimmedString];
+                                  }
+
+                                  range = [options rangeAtIndex:3];
+                                  if( range.location != NSNotFound ){
+                                      *stop = YES;
+                                      
+                                      [formData setObject:optionValue forKey:selectName];
+                                  }else if( index == 0 ){
+                                      [formData setObject:optionValue forKey:selectName];
+                                  }
+                                  
+                              }];
+                          }];
+
     // we will newer use cancel
     [formData removeObjectForKey:@"frmTest:btnCancel"];
     

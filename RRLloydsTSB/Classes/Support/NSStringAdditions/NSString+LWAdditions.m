@@ -80,14 +80,20 @@
 }
 
 
-- (NSArray *)matchesForPattern:(NSString *)pattern {
+- (void)enumerateMatchesForPattern:(NSString *)pattern usingBlock:(void (^)(NSTextCheckingResult *checkingResult, BOOL *stop))block {
     NSRegularExpression *inputRegex = [NSRegularExpression regularExpressionWithPattern: pattern
                                                                                 options: ( NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines )
                                                                                   error: NULL];
     
-    return [inputRegex matchesInString: self
-                               options: NSMatchingReportCompletion
-                                 range: NSMakeRange(0, self.length)];
+    NSArray *checkingResults = [inputRegex matchesInString: self
+                                                   options: NSMatchingReportCompletion
+                                                     range: NSMakeRange(0, self.length)];
+    
+    for ( NSTextCheckingResult *result in checkingResults ) {
+        BOOL stop = NO;
+        block( result, &stop );
+        if( stop ) break;
+    }
 }
 
 
