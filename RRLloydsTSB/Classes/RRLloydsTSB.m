@@ -198,7 +198,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 }
 
 
-- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSSet *statement, NSError *error))completionHandler {
+- (void)statementForAccountUUID:(NSString *)accountUUID fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSSet *statement, NSError *error))completionHandler {
         
     dispatch_async(_mainDispatchQueue, ^{
         NSError *error = nil;
@@ -210,7 +210,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         }
         
         // Open account if needed
-        if( (error = [self openAccountWithUUID:account.UUID]) ){
+        if( (error = [self openAccountWithUUID:accountUUID]) ){
             dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
             return;
         }

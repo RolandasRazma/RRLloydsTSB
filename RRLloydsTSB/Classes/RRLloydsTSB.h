@@ -44,6 +44,6 @@ enum {
 
 - (id)initWithUser:(NSString *)user password:(NSString *)password secret:(NSString *)secret;
 - (void)accounts:(void (^)(NSArray *accounts, NSError *error))completionHandler;
-- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSSet *statement, NSError *error))completionHandler;
+- (void)statementForAccountUUID:(NSString *)accountUUID fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSSet *statement, NSError *error))completionHandler;
 
 @end
