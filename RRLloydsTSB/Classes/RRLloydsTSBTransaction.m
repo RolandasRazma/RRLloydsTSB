@@ -25,10 +25,6 @@
 
 
 - (NSString *)description {
-    /*
-     "Credit Amount" = "952.00";
-     "Debit Amount" = "";
-    */
     return [NSString stringWithFormat: @"<%@: %p | type = %@ | title = %@>", [self class], self, self.type, self.title];
 }
 
