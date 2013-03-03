@@ -108,7 +108,7 @@
     
     NSString *newLine;
     while ( [lineScanner scanUpToCharactersFromSet:newlineCharacterSet intoString:&newLine] || ![lineScanner isAtEnd] ) {
-        NSMutableArray *lineData = [[newLine componentsSeparatedByString:@","] mutableCopy];
+        NSMutableArray *lineData = [[[newLine trimmedString] componentsSeparatedByString:@","] mutableCopy];
         if( !keys ){
             keys = lineData;
             continue;
