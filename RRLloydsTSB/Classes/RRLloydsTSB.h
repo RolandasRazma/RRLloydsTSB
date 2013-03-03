@@ -30,6 +30,12 @@
 NSString * const RRLloydsTSBErrorDomain;
 
 
+enum {
+    kRRLloydsTSBInternalError,
+    kRRLloydsTSBServerError
+};
+
+
 @class RRLloydsTSBAccount;
 
 

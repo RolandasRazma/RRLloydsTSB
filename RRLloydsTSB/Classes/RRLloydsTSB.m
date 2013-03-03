@@ -37,8 +37,9 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
     NSString            *_password;
     NSString            *_secret;
     
-    BOOL                _connected;
     dispatch_queue_t    _dispatchQueue;
+    BOOL                _connected;
+    NSString            *_accounOpened;
 }
 
 
@@ -71,57 +72,67 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
 
 - (NSError *)connectWithWithUser:(NSString *)user password:(NSString *)password secret:(NSString *)secret {
-
     NSError *error = nil;
     
     @synchronized( self ){
-        if( _connected ) return error;
-        
-        NSString *html = [self callURL:[NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/logon/login.jsp"] method:@"GET" data:nil];
+        // We already connected - just return
+        if( _connected ) return nil;
+
+        NSString *html = [self callURL: [NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/logon/login.jsp"]
+                                method: @"GET"
+                                  data: nil
+                                 error: &error];
+ 
+        // Do we have error?
+        if( error ) return error;
 
         // Parse out password request
         NSMutableDictionary *formData = [[self formDataInHTML:html] mutableCopy];
-        if( formData.count ){
-            [formData setObject:_user       forKey:@"frmLogin:strCustomerLogin_userID"];
-            [formData setObject:_password   forKey:@"frmLogin:strCustomerLogin_pwd"];
-
-            html = [self callURL:[NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/primarylogin"] method:@"POST" data:formData];
-
-            // Parse out secret request
-            formData = [[self formDataInHTML:html] mutableCopy];
-            if( formData.count ){
-                for( NSString *key in [[formData allKeys] reverseObjectEnumerator] ){
-                    if( ![key matchesPredicateFormat:@".*memInfo[0-9]+"] ) continue;
-                    
-                    NSInteger index = [[html stringByMatchingPattern:[NSString stringWithFormat:@"<label\\s+for\\s*=\\s*[\"']%@[\"'][^>]*>[ a-zA-Z]*(\\d+)[ a-zA-Z]*:</label>", key] range:1] intValue];
-                    
-                    NSAssert1(index>0, @"bad index for key %@", key);
-                    
-                    if( (NSUInteger)index <= _secret.length ){
-                        [formData setObject: [@"&nbsp;" stringByAppendingString: [[_secret substringWithRange:NSMakeRange((NSUInteger)index -1, 1)] lowercaseString]]
-                                     forKey: key];
-                    }else{
-                        [formData setObject:@"-" forKey:key];
-                    }
-                }
-
-                html = [self callURL:[NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/logon/entermemorableinformation.jsp"] method:@"POST" data:formData];
-
-                // Set connection flag to not make connection next time
-                _connected = ([html matchesPredicateFormat:@".*lnkcmd=lnkLogout.*"] || [html matchesPredicateFormat:@".*lnkcmd=lnkCustomerLogoff.*"]);
-
-                if( !_connected ){
-                    error = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Bad secret"}];
-                }
+        [formData setObject:_user       forKey:@"frmLogin:strCustomerLogin_userID"];
+        [formData setObject:_password   forKey:@"frmLogin:strCustomerLogin_pwd"];
+        
+        html = [self callURL: [NSURL URLWithString:@"https://online.lloydstsb.co.uk/personal/primarylogin"]
+                      method: @"POST"
+                        data: formData
+                       error: &error];
+        
+        // Do we have error?
+        if( error ) return error;
+        
+        // Parse out secret request
+        formData = [[self formDataInHTML:html] mutableCopy];
+        for( NSString *key in [[formData allKeys] reverseObjectEnumerator] ){
+            if( ![key matchesPredicateFormat:@".*memInfo[0-9]+"] ) continue;
+            
+            NSInteger index = [[html stringByMatchingPattern:[NSString stringWithFormat:@"<label\\s+for\\s*=\\s*[\"']%@[\"'][^>]*>[ a-zA-Z]*(\\d+)[ a-zA-Z]*:</label>", key] range:1] intValue];
+            
+            NSAssert1(index>0, @"bad index for key %@", key);
+            
+            if( (NSUInteger)index <= _secret.length ){
+                [formData setObject: [@"&nbsp;" stringByAppendingString: [[_secret substringWithRange:NSMakeRange((NSUInteger)index -1, 1)] lowercaseString]]
+                             forKey: key];
             }else{
-                error = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Bad password"}];
+                [formData setObject: @"-" forKey:key];
             }
-        }else{
-            error = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Unknown error"}];
+        }
+        
+        html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/logon/entermemorableinformation.jsp"]
+                      method: @"POST"
+                        data: formData
+                       error: &error];
+        
+        // Do we have error?
+        if( error ) return error;
+        
+        // Set connection flag to not make connection next time
+        _connected = ([html matchesPredicateFormat:@".*lnkcmd=lnkLogout.*"] || [html matchesPredicateFormat:@".*lnkcmd=lnkCustomerLogoff.*"]);
+        
+        if( !_connected ){
+            return [NSError errorWithDomain:RRLloydsTSBErrorDomain code:kRRLloydsTSBInternalError userInfo:@{NSLocalizedDescriptionKey:@"Bad secret"}];
         }
     }
     
-    return error;
+    return nil;
 }
 
 
@@ -130,55 +141,57 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
     dispatch_async(_dispatchQueue, ^{
         NSError *error = nil;
         
-        if( !self.isConnected ){
-            if( (error = [self connectWithWithUser:_user password:_password secret:_secret]) ) {
-                dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
-                return;
-            }
-        }
-
-        NSString *html = [self callURL:[NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/account_overview_personal/"] method:@"GET" data:nil];
-
-        if( html.length ){
-            NSMutableArray *accountsList = [NSMutableArray array];
-            
-            [html enumerateMatchesForPattern: @"accountDetails.*?<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([a-z0-9]+)[^\"]*[\"'][^>]*>\\s*<img[^>]+>([^>]+)</a>.*?>\\s*Sort\\s+Code[^>]+>([^<]+).*?Account\\s+Number[^>]+>([^<]+).*?accountBalance.*?>\\s*Balance\\s*<[^>]+>([^<]+)"
-                                  usingBlock: ^(NSTextCheckingResult *checkingResult, BOOL *stop) {
-                                      
-                                      RRLloydsTSBAccount *lloydsTSBAccount = [[RRLloydsTSBAccount alloc] initWithUUID: [[html substringWithRange:[checkingResult rangeAtIndex:1]] trimmedString]];
-                                      
-                                      // Title
-                                      [lloydsTSBAccount setTitle: [[html substringWithRange:[checkingResult rangeAtIndex:2]] trimmedString]];
-                                      
-                                      // Short Code
-                                      [lloydsTSBAccount setShortCode: [[html substringWithRange:[checkingResult rangeAtIndex:3]] trimmedString]];
-                                      
-                                      // Account Number
-                                      [lloydsTSBAccount setAccountNumber: [[html substringWithRange:[checkingResult rangeAtIndex:4]] trimmedString]];
-                                      
-                                      // Balance
-                                      NSString *accountBalance = [[html substringWithRange:[checkingResult rangeAtIndex:5]] trimmedString];
-                                      accountBalance = [accountBalance stringByReplacingOccurrencesOfString: @"[^\\d.]"
-                                                                                                 withString: @""
-                                                                                                    options: NSRegularExpressionSearch
-                                                                                                      range: NSMakeRange(0, accountBalance.length)];
-                                      
-                                      NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
-                                      [numberFormatter setNumberStyle:NSNumberFormatterDecimalStyle];
-                                      [numberFormatter setGeneratesDecimalNumbers:YES];
-                                      NSNumber *balance = [numberFormatter numberFromString:accountBalance];
-                                      [lloydsTSBAccount setBalance: (NSDecimalNumber *)(balance?balance:[NSDecimalNumber numberWithInt:0])];
-                                      
-                                      // Add to list
-                                      [accountsList addObject: lloydsTSBAccount];
-                                  }];
-
-            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(accountsList, error); });
-        }else{
-            error = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:-1 userInfo:@{NSLocalizedDescriptionKey:@"Unknown error"}];
+        // Connect if needed
+        if( (error = [self connectWithWithUser:_user password:_password secret:_secret]) ) {
             dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+            return;
         }
 
+        NSString *html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/account_overview_personal/"]
+                                method: @"GET"
+                                  data: nil
+                                 error: &error];
+
+        // Do we have error?
+        if( error ){
+            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+            return;
+        }
+
+        // Parse accounts
+        NSMutableArray *accountsList = [NSMutableArray array];
+        [html enumerateMatchesForPattern: @"accountDetails.*?<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([a-z0-9]+)[^\"]*[\"'][^>]*>\\s*<img[^>]+>([^>]+)</a>.*?>\\s*Sort\\s+Code[^>]+>([^<]+).*?Account\\s+Number[^>]+>([^<]+).*?accountBalance.*?>\\s*Balance\\s*<[^>]+>([^<]+)"
+                              usingBlock: ^(NSTextCheckingResult *checkingResult, BOOL *stop) {
+                                  
+                                  RRLloydsTSBAccount *lloydsTSBAccount = [[RRLloydsTSBAccount alloc] initWithUUID: [[html substringWithRange:[checkingResult rangeAtIndex:1]] trimmedString]];
+                                  
+                                  // Title
+                                  [lloydsTSBAccount setTitle: [[html substringWithRange:[checkingResult rangeAtIndex:2]] trimmedString]];
+                                  
+                                  // Short Code
+                                  [lloydsTSBAccount setShortCode: [[html substringWithRange:[checkingResult rangeAtIndex:3]] trimmedString]];
+                                  
+                                  // Account Number
+                                  [lloydsTSBAccount setAccountNumber: [[html substringWithRange:[checkingResult rangeAtIndex:4]] trimmedString]];
+                                  
+                                  // Balance
+                                  NSString *accountBalance = [[html substringWithRange:[checkingResult rangeAtIndex:5]] trimmedString];
+                                  accountBalance = [accountBalance stringByReplacingOccurrencesOfString: @"[^\\d.]"
+                                                                                             withString: @""
+                                                                                                options: NSRegularExpressionSearch
+                                                                                                  range: NSMakeRange(0, accountBalance.length)];
+                                  
+                                  NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
+                                  [numberFormatter setNumberStyle:NSNumberFormatterDecimalStyle];
+                                  [numberFormatter setGeneratesDecimalNumbers:YES];
+                                  NSNumber *balance = [numberFormatter numberFromString:accountBalance];
+                                  [lloydsTSBAccount setBalance: (NSDecimalNumber *)(balance?balance:[NSDecimalNumber numberWithInt:0])];
+                                  
+                                  // Add to list
+                                  [accountsList addObject: lloydsTSBAccount];
+                              }];
+        
+        dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(accountsList, error); });
     });
     
 }
@@ -188,24 +201,31 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
     dispatch_async(_dispatchQueue, ^{
         NSError *error = nil;
-
-        if( !self.isConnected ){
-            if( (error = [self connectWithWithUser:_user password:_password secret:_secret]) ) {
-                dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
-                return;
-            }
+        
+        // Connect if needed
+        if( (error = [self connectWithWithUser:_user password:_password secret:_secret]) ) {
+            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+            return;
         }
         
-        NSString *html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewaccount/accountoverviewpersonalbase.jsp"]
+        // Open account if needed
+        if( (error = [self openAccountWithUUID:account.UUID]) ){
+            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+            return;
+        }
+        
+        // Get export form
+        NSString *html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/ViewProductDetails.jsp"]
                                 method: @"GET"
-                                  data: @{ @"NOMINATED_ACCOUNT": account.UUID,
-                                                      @"lnkcmd": @"frm1:lstAccLst:lkImageRetail1",
-                                                          @"al": @""}];
+                                  data: @{ @"lnkcmd": @"pnlgrpStatement:conS1:lkoverlay", @"al": @""}
+                                 error: &error];
 
-        html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/ViewProductDetails.jsp"]
-                                method: @"GET"
-                                  data: @{ @"lnkcmd": @"pnlgrpStatement:conS1:lkoverlay", @"al": @""}];
-
+        // Error in request?
+        if( error ){
+            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+            return;
+        }
+        
         NSDateComponents *fromDateComponents = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:fromDate];
         NSDateComponents *toDateComponents   = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:toDate];        
         
@@ -218,29 +238,67 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         formData[@"frmTest:dtSearchToDate.year"]    = [NSString stringWithFormat:@"%i",   toDateComponents.year];
         formData[@"frmTest:strExportFormatSelected"]= @"Internet banking text/spreadsheet (.CSV)";
 
+        // Ask for export
         html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/m44_exportstatement_fallback.jsp"]
                       method: @"POST"
-                        data: formData];
-        
+                        data: formData
+                       error: &error];
+
+        // If export returned error
+        if( error ){
+            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+            return;
+        }
+
+        // Parse export
         NSMutableArray *statement = [NSMutableArray array];
         [html parseCSVUsingBlock:^(NSDictionary *data) {
             [statement addObject:data];
         }];
         
-        completionHandler( statement, error );
+        // Do callback
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completionHandler( statement, nil );
+        });
     });
     
  
 }
 
 
-- (NSString *)callURL:(NSURL *)URL method:(NSString *)method data:(NSDictionary *)data {
+- (NSError *)openAccountWithUUID:(NSString *)UUID{
+    if( [_accounOpened isEqualToString:UUID] ) return nil;
     
-    NSMutableString   *html         = nil;
-    NSHTTPURLResponse *urlResponse  = nil;
+    _accounOpened = nil;
     
+    NSError *error;
+    
+    NSString *html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewaccount/accountoverviewpersonalbase.jsp"]
+                            method: @"GET"
+                              data: @{ @"NOMINATED_ACCOUNT": UUID,
+                                                  @"lnkcmd": @"frm1:lstAccLst:lkImageRetail1",
+                                                      @"al": @""}
+                            error: &error];
+    
+    if( error ){
+        return error;
+    }else if( ![html containsString:@"lnkcmd=lkAccOverView_retail"] ){
+        return [NSError errorWithDomain:RRLloydsTSBErrorDomain code:kRRLloydsTSBInternalError userInfo:@{NSLocalizedDescriptionKey:@"Unable to oppen account"}];
+    }
+    
+    _accounOpened = UUID;
+    
+    return nil;
+}
+
+
+- (NSString *)callURL:(NSURL *)URL method:(NSString *)method data:(NSDictionary *)data error:(NSError **)error {
+    
+    NSMutableString *html = nil;
+    NSError *internalError;
+
     if( URL.isFileURL ){
-        html = [NSMutableString stringWithContentsOfURL:URL encoding:NSUTF8StringEncoding error:NULL];
+        html = [NSMutableString stringWithContentsOfURL:URL encoding:NSUTF8StringEncoding error:&internalError];
     }else{
         NSMutableURLRequest *request = nil;
 
@@ -273,23 +331,41 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         [request addValue:@"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" forHTTPHeaderField:@"Accept"];
 
         // Query server
-        NSError *requestError = nil;
+        NSHTTPURLResponse *urlResponse  = nil;
         
-        NSData *response = [NSURLConnection sendSynchronousRequest:request returningResponse:&urlResponse error:&requestError];
+        NSData *response = [NSURLConnection sendSynchronousRequest:request returningResponse:&urlResponse error:&internalError];
         
-        if( response && !requestError && response.length ){
+        if( internalError ){
+            // So we got request error...
+        }else if( urlResponse.statusCode != 200 ){
+            internalError = [NSError errorWithDomain: RRLloydsTSBErrorDomain
+                                                code: kRRLloydsTSBServerError
+                                            userInfo: @{NSLocalizedDescriptionKey:[NSHTTPURLResponse localizedStringForStatusCode:urlResponse.statusCode]}];
+        }else if( response && response.length ){
             html = [[NSMutableString alloc] initWithData:response encoding:NSUTF8StringEncoding];
         }else{
-            NSLog(@"err %@ %@", requestError, urlResponse);
+            internalError = [NSError errorWithDomain: RRLloydsTSBErrorDomain
+                                                code: kRRLloydsTSBServerError
+                                            userInfo: @{NSLocalizedDescriptionKey:@"Server call error"}];
+        }
+        
+        // Cleanup HTML for easyer parsing
+        if( !internalError && html.length && [[[urlResponse allHeaderFields] objectForKey:@"Content-Type"] containsString:@"text/htm"] ){
+            [html replaceOccurrencesOfString:@"\r"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
+            [html replaceOccurrencesOfString:@"\n"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
+            [html replaceOccurrencesOfString:@"\t"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
+            [html replaceOccurrencesOfString:@">\\s+<"  withString:@"><" options:NSRegularExpressionSearch range:NSMakeRange(0, html.length)];
+            
+            NSString *errorString = [[html stringByMatchingPattern:@"class\\s*=\\s*[\"']formSubmitError[\"'][^>]*>(.*?)</" range:1] trimmedString];
+            if( errorString.length ){
+                internalError = [NSError errorWithDomain:RRLloydsTSBErrorDomain code:kRRLloydsTSBServerError userInfo:@{NSLocalizedDescriptionKey:errorString}];
+            }
         }
     }
-
-    // Cleanup HTML for easyer parsing
-    if( html.length && urlResponse && [[[urlResponse allHeaderFields] objectForKey:@"Content-Type"] containsString:@"text/htm"] ){
-        [html replaceOccurrencesOfString:@"\r"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
-        [html replaceOccurrencesOfString:@"\n"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
-        [html replaceOccurrencesOfString:@"\t"      withString:@" "  options:0 range:NSMakeRange(0, html.length)];
-        [html replaceOccurrencesOfString:@">\\s+<"  withString:@"><" options:NSRegularExpressionSearch range:NSMakeRange(0, html.length)];
+    
+    if( internalError ){
+        if( error != NULL ) *error = internalError;
+        return nil;
     }
     
     return html;
@@ -302,7 +378,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
     
     HTML = [HTML stringByMatchingPattern:@"<form.*?</form>"];
 
-    // Inputs
+    // Parse out inputs
     NSRegularExpression *valueRegex = [NSRegularExpression regularExpressionWithPattern: @"value\\s*=\\s*[\"']([^\"]+)[\"']"
                                                                                 options: NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines
                                                                                   error: NULL];
@@ -323,7 +399,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
                               
                           }];
 
-    // Selects @"<option([^>]*)>(.*?)</option>"
+    // Parse out selects
     NSRegularExpression *optionRegex = [NSRegularExpression regularExpressionWithPattern: @"<option(\\s*value=\"([^\"]+)\")*(\\s*selected)*>(.*?)</option>"
                                                                                  options: ( NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators | NSRegularExpressionAnchorsMatchLines )
                                                                                    error: NULL];
