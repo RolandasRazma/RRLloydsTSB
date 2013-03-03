@@ -23,7 +23,7 @@ RRLloydsTSB *lloydsTSB = [[RRLloydsTSB alloc] initWithUser: account
         [_lloydsTSB statementForAccount: account
                                fromDate: [NSDate dateWithTimeIntervalSinceNow: -86400.0 *30]
                                  toDate: [NSDate date]
-                      completionHandler: ^(NSArray *statement, NSError *error) {
+                      completionHandler: ^(NSSet *statement, NSError *error) {
                         if( error ){
                             NSLog(@"NSError: %@", error.description);
                             return;

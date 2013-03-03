@@ -25,7 +25,7 @@
 //
 
 #import "RRLloydsTSBAccount.h"
-#import "RRLloydsTSBAccountPrivate.h"
+#import "RRLloydsTSBAccount+Private.h"
 
 
 @implementation RRLloydsTSBAccount {

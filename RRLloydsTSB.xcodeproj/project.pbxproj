@@ -9,17 +9,21 @@
 /* Begin PBXBuildFile section */
 		F019A5E516DA23740045256B /* RRLloydsTSB.m in Sources */ = {isa = PBXBuildFile; fileRef = F019A5E316DA23740045256B /* RRLloydsTSB.m */; };
 		F07EF7A716DA22E500985848 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F07EF7A616DA22E500985848 /* Foundation.framework */; };
+		F09D284B16E36D0C004AB8A7 /* RRLloydsTSBTransaction.m in Sources */ = {isa = PBXBuildFile; fileRef = F09D284A16E36D0C004AB8A7 /* RRLloydsTSBTransaction.m */; };
 		F0A59F4616DA7A9900C9FB3F /* NSString+LWAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = F0A59F4416DA7A9900C9FB3F /* NSString+LWAdditions.m */; };
 		F0A59F4B16DAACC900C9FB3F /* RRLloydsTSBAccount.m in Sources */ = {isa = PBXBuildFile; fileRef = F0A59F4A16DAACC900C9FB3F /* RRLloydsTSBAccount.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		F009083216DBF8AE00F32834 /* RRLloydsTSBAccountPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RRLloydsTSBAccountPrivate.h; sourceTree = "<group>"; };
+		F009083216DBF8AE00F32834 /* RRLloydsTSBAccount+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "RRLloydsTSBAccount+Private.h"; sourceTree = "<group>"; };
 		F019A5E216DA23740045256B /* RRLloydsTSB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RRLloydsTSB.h; sourceTree = "<group>"; };
 		F019A5E316DA23740045256B /* RRLloydsTSB.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RRLloydsTSB.m; sourceTree = "<group>"; };
 		F07EF7A316DA22E500985848 /* libRRLloydsTSB.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libRRLloydsTSB.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		F07EF7A616DA22E500985848 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		F07EF7AA16DA22E500985848 /* Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Prefix.pch; sourceTree = "<group>"; };
+		F09D284916E36D0C004AB8A7 /* RRLloydsTSBTransaction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RRLloydsTSBTransaction.h; sourceTree = "<group>"; };
+		F09D284A16E36D0C004AB8A7 /* RRLloydsTSBTransaction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RRLloydsTSBTransaction.m; sourceTree = "<group>"; };
+		F09D284C16E36DA9004AB8A7 /* RRLloydsTSBTransaction+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "RRLloydsTSBTransaction+Private.h"; sourceTree = "<group>"; };
 		F0A59F4316DA7A9900C9FB3F /* NSString+LWAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+LWAdditions.h"; sourceTree = "<group>"; };
 		F0A59F4416DA7A9900C9FB3F /* NSString+LWAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+LWAdditions.m"; sourceTree = "<group>"; };
 		F0A59F4916DAACC900C9FB3F /* RRLloydsTSBAccount.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RRLloydsTSBAccount.h; sourceTree = "<group>"; };
@@ -46,8 +50,11 @@
 				F019A5E216DA23740045256B /* RRLloydsTSB.h */,
 				F019A5E316DA23740045256B /* RRLloydsTSB.m */,
 				F0A59F4916DAACC900C9FB3F /* RRLloydsTSBAccount.h */,
-				F009083216DBF8AE00F32834 /* RRLloydsTSBAccountPrivate.h */,
+				F009083216DBF8AE00F32834 /* RRLloydsTSBAccount+Private.h */,
 				F0A59F4A16DAACC900C9FB3F /* RRLloydsTSBAccount.m */,
+				F09D284916E36D0C004AB8A7 /* RRLloydsTSBTransaction.h */,
+				F09D284C16E36DA9004AB8A7 /* RRLloydsTSBTransaction+Private.h */,
+				F09D284A16E36D0C004AB8A7 /* RRLloydsTSBTransaction.m */,
 			);
 			name = Classes;
 			path = RRLloydsTSB/Classes;
@@ -170,6 +177,7 @@
 				F019A5E516DA23740045256B /* RRLloydsTSB.m in Sources */,
 				F0A59F4616DA7A9900C9FB3F /* NSString+LWAdditions.m in Sources */,
 				F0A59F4B16DAACC900C9FB3F /* RRLloydsTSBAccount.m in Sources */,
+				F09D284B16E36D0C004AB8A7 /* RRLloydsTSBTransaction.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

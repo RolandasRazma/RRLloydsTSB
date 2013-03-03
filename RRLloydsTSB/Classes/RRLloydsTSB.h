@@ -25,6 +25,8 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "RRLloydsTSBAccount.h"
+#import "RRLloydsTSBTransaction.h"
 
 
 NSString * const RRLloydsTSBErrorDomain;
@@ -36,15 +38,12 @@ enum {
 };
 
 
-@class RRLloydsTSBAccount;
-
-
 @interface RRLloydsTSB : NSObject
 
 @property(nonatomic, readonly, getter=isConnected) BOOL connected;
 
 - (id)initWithUser:(NSString *)user password:(NSString *)password secret:(NSString *)secret;
 - (void)accounts:(void (^)(NSArray *accounts, NSError *error))completionHandler;
-- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSArray *statement, NSError *error))completionHandler;
+- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSSet *statement, NSError *error))completionHandler;
 
 @end

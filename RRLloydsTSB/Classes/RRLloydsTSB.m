@@ -26,7 +26,8 @@
 
 #import "RRLloydsTSB.h"
 #import "NSString+LWAdditions.h"
-#import "RRLloydsTSBAccountPrivate.h"
+#import "RRLloydsTSBAccount+Private.h"
+#import "RRLloydsTSBTransaction+Private.h"
 
 
 NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
@@ -197,7 +198,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 }
 
 
-- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSArray *statement, NSError *error))completionHandler {
+- (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSSet *statement, NSError *error))completionHandler {
         
     dispatch_async(_mainDispatchQueue, ^{
         NSError *error = nil;
@@ -215,7 +216,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         }
         
         // Statements
-        NSMutableArray *statement = [NSMutableArray array];
+        NSMutableSet *statement = [NSMutableSet set];
         
         // Number of calls requered to gett all statements (lloyds TSB allows export only fro 30d and 150 records)
         NSInteger numberOfDays = (NSInteger)ceil([toDate timeIntervalSinceDate:fromDate] /86400.0);
@@ -271,7 +272,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
             __block NSUInteger numberOfRecords = 0;
             [html parseCSVUsingBlock: ^(NSDictionary *data) {
                 numberOfRecords++;
-                [statement addObject:data];
+                [statement addObject: [[RRLloydsTSBTransaction alloc] initWithDictionary:data]];
             }];
 
             // LLoydsTSB allow to export only 150 records
