@@ -10,7 +10,11 @@ RRLloydsTSB *lloydsTSB = [[RRLloydsTSB alloc] initWithUser: account
                                                     secret: secret];
             
 // List accounts
-[_lloydsTSB accounts:^(NSArray *accounts, NSError *error) {
+[_lloydsTSB accounts: ^(NSArray *accounts, NSError *error) {
+    if( error ){
+        NSLog(@"NSError: %@", error.description);
+        return;
+    }
                 
     for( RRLloydsTSBAccount *account in accounts ){
         NSLog(@"accounts\n\tTitle: %@\n\tShort Code: %@\n\tAccount Number: %@\n\tBalance: £%@", account.title, account.shortCode, account.accountNumber, account.balance);
@@ -20,12 +24,15 @@ RRLloydsTSB *lloydsTSB = [[RRLloydsTSB alloc] initWithUser: account
                                fromDate: [NSDate dateWithTimeIntervalSinceNow: -86400.0 *30]
                                  toDate: [NSDate date]
                       completionHandler: ^(NSArray *statement, NSError *error) {
+                        if( error ){
+                            NSLog(@"NSError: %@", error.description);
+                            return;
+                        }
+                                      
                         NSLog(@"%@", statement);
-        }];
+                    }];
                  
         break;
     }
-                
 }];
 ```
-
