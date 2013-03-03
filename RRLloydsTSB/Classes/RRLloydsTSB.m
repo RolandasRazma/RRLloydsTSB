@@ -268,10 +268,17 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
             }
             
             // Parse export
+            __block NSUInteger numberOfRecords = 0;
             [html parseCSVUsingBlock: ^(NSDictionary *data) {
+                numberOfRecords++;
                 [statement addObject:data];
             }];
 
+            // LLoydsTSB allow to export only 150 records
+            if( numberOfRecords == 150 ){
+                NSLog(@"TODO: it might be that list got truncated...");
+            }
+            
             // Push new dates
             nextFromDate  = nextToDate;
             numberOfDays -= dayIncrement;
