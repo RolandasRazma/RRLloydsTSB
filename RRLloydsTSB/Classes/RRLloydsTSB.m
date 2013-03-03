@@ -37,7 +37,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
     NSString            *_password;
     NSString            *_secret;
     
-    dispatch_queue_t    _dispatchQueue;
+    dispatch_queue_t    _mainDispatchQueue;
     BOOL                _connected;
     NSString            *_accounOpened;
 }
@@ -48,7 +48,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
 
 - (void)dealloc {
-    dispatch_release(_dispatchQueue);
+    dispatch_release(_mainDispatchQueue);
 }
 
 
@@ -61,10 +61,10 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
     if( (self = [self init]) ){
         NSAssert(!_user.length || !_password.length || !_secret.length, @"Incorrect data");
             
-        _user           = user;
-        _password       = password;
-        _secret         = secret;
-        _dispatchQueue  = dispatch_queue_create("RRLloydsTSBBackground", DISPATCH_QUEUE_SERIAL);
+        _user               = user;
+        _password           = password;
+        _secret             = secret;
+        _mainDispatchQueue  = dispatch_queue_create("RRLloydsTSBMainSerialQueue", DISPATCH_QUEUE_SERIAL);
     }
     
     return self;
@@ -138,7 +138,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
 - (void)accounts:(void (^)(NSArray *accounts, NSError *error))completionHandler {
 
-    dispatch_async(_dispatchQueue, ^{
+    dispatch_async(_mainDispatchQueue, ^{
         NSError *error = nil;
         
         // Connect if needed
@@ -198,8 +198,8 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
 
 - (void)statementForAccount:(RRLloydsTSBAccount *)account fromDate:(NSDate *)fromDate toDate:(NSDate *)toDate completionHandler:(void (^)(NSArray *statement, NSError *error))completionHandler {
-
-    dispatch_async(_dispatchQueue, ^{
+        
+    dispatch_async(_mainDispatchQueue, ^{
         NSError *error = nil;
         
         // Connect if needed
@@ -214,47 +214,68 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
             return;
         }
         
-        // Get export form
-        NSString *html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/ViewProductDetails.jsp"]
-                                method: @"GET"
-                                  data: @{ @"lnkcmd": @"pnlgrpStatement:conS1:lkoverlay", @"al": @""}
-                                 error: &error];
-
-        // Error in request?
-        if( error ){
-            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
-            return;
-        }
-        
-        NSDateComponents *fromDateComponents = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:fromDate];
-        NSDateComponents *toDateComponents   = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:toDate];        
-        
-        NSMutableDictionary *formData = [[self formDataInHTML:html] mutableCopy];
-        formData[@"frmTest:dtSearchFromDate"]       = [NSString stringWithFormat:@"%02d", fromDateComponents.day];
-        formData[@"frmTest:dtSearchFromDate.month"] = [NSString stringWithFormat:@"%02d", fromDateComponents.month];
-        formData[@"frmTest:dtSearchFromDate.year"]  = [NSString stringWithFormat:@"%i",   fromDateComponents.year];
-        formData[@"frmTest:dtSearchToDate"]         = [NSString stringWithFormat:@"%02d", toDateComponents.day];
-        formData[@"frmTest:dtSearchToDate.month"]   = [NSString stringWithFormat:@"%02d", toDateComponents.month];
-        formData[@"frmTest:dtSearchToDate.year"]    = [NSString stringWithFormat:@"%i",   toDateComponents.year];
-        formData[@"frmTest:strExportFormatSelected"]= @"Internet banking text/spreadsheet (.CSV)";
-
-        // Ask for export
-        html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/m44_exportstatement_fallback.jsp"]
-                      method: @"POST"
-                        data: formData
-                       error: &error];
-
-        // If export returned error
-        if( error ){
-            dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
-            return;
-        }
-
-        // Parse export
+        // Statements
         NSMutableArray *statement = [NSMutableArray array];
-        [html parseCSVUsingBlock:^(NSDictionary *data) {
-            [statement addObject:data];
-        }];
+        
+        // Number of calls requered to gett all statements (lloyds TSB allows export only fro 30d and 150 records)
+        NSInteger numberOfDays = (NSInteger)ceil([toDate timeIntervalSinceDate:fromDate] /86400.0);
+        NSUInteger dayIncrement = (NSUInteger)ceilf(numberOfDays /ceilf(numberOfDays /(27.0f *3.0f)));
+        
+        NSDate *nextToDate  = nil;
+        NSDate *nextFromDate= fromDate;
+        
+        do {
+            // Get new range
+            nextToDate = [nextFromDate dateByAddingTimeInterval:dayIncrement *86400.0];
+            if( [toDate compare:nextToDate] == NSOrderedAscending ){
+                nextToDate = toDate;
+            }
+
+            NSDateComponents *fromDateComponents = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:nextFromDate];
+            NSDateComponents *toDateComponents   = [[NSCalendar currentCalendar] components: (NSYearCalendarUnit|NSMonthCalendarUnit|NSDayCalendarUnit) fromDate:nextToDate];
+
+            // Get export form
+            NSString *html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/ViewProductDetails.jsp"]
+                                    method: @"GET"
+                                      data: @{ @"lnkcmd": @"pnlgrpStatement:conS1:lkoverlay", @"al": @""}
+                                     error: &error];
+            
+            // Error in request?
+            if( error ){
+                dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+                return;
+            }
+            
+            NSMutableDictionary *formData = [[self formDataInHTML:html] mutableCopy];
+            formData[@"frmTest:dtSearchFromDate"]       = [NSString stringWithFormat:@"%02d", fromDateComponents.day];
+            formData[@"frmTest:dtSearchFromDate.month"] = [NSString stringWithFormat:@"%02d", fromDateComponents.month];
+            formData[@"frmTest:dtSearchFromDate.year"]  = [NSString stringWithFormat:@"%i",   fromDateComponents.year];
+            formData[@"frmTest:dtSearchToDate"]         = [NSString stringWithFormat:@"%02d", toDateComponents.day];
+            formData[@"frmTest:dtSearchToDate.month"]   = [NSString stringWithFormat:@"%02d", toDateComponents.month];
+            formData[@"frmTest:dtSearchToDate.year"]    = [NSString stringWithFormat:@"%i",   toDateComponents.year];
+            formData[@"frmTest:strExportFormatSelected"]= @"Internet banking text/spreadsheet (.CSV)";
+
+            // Ask for export
+            html = [self callURL: [NSURL URLWithString:@"https://secure2.lloydstsb.co.uk/personal/a/viewproductdetails/m44_exportstatement_fallback.jsp"]
+                          method: @"POST"
+                            data: formData
+                           error: &error];
+            
+            // If export returned error
+            if( error ){
+                dispatch_async(dispatch_get_main_queue(), ^{ completionHandler(nil, error); });
+                return;
+            }
+            
+            // Parse export
+            [html parseCSVUsingBlock: ^(NSDictionary *data) {
+                [statement addObject:data];
+            }];
+
+            // Push new dates
+            nextFromDate  = nextToDate;
+            numberOfDays -= dayIncrement;
+        } while ( numberOfDays > 0 );
         
         // Do callback
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -262,7 +283,6 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
         });
     });
     
- 
 }
 
 
