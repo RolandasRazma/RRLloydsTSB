@@ -161,7 +161,7 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
 
         // Parse accounts
         NSMutableArray *accountsList = [NSMutableArray array];
-        [html enumerateMatchesForPattern: @"accountDetails.*?<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([a-z0-9]+)[^\"]*[\"'][^>]*>\\s*<img[^>]+>([^>]+)</a>.*?>\\s*Sort\\s+Code[^>]+>([^<]+).*?Account\\s+Number[^>]+>([^<]+).*?accountBalance.*?>\\s*Balance\\s*<[^>]+>([^<]+)"
+        [html enumerateMatchesForPattern: @"accountDetails.*?<a[^>]+href\\s*=\\s*[\"'][^\"]*/viewaccount/[^\"]+NOMINATED_ACCOUNT=([a-z0-9]+)[^\"]*[\"'][^>]*>\\s*<img[^>]+>([^>]+)</a>.*?>\\s*Sort\\s+Code[^>]+>([^<]+).*?Account\\s+Number[^>]+>([^<]+).*?accountBalance.*?>\\s*Balance\\s*<[^>]+>(.*?)</"
                               usingBlock: ^(NSTextCheckingResult *checkingResult, BOOL *stop) {
                                   
                                   RRLloydsTSBAccount *lloydsTSBAccount = [[RRLloydsTSBAccount alloc] initWithUUID: [[html substringWithRange:[checkingResult rangeAtIndex:1]] trimmedString]];
@@ -174,9 +174,13 @@ NSString * const RRLloydsTSBErrorDomain = @"RRLloydsTSBErrorDomain";
                                   
                                   // Account Number
                                   [lloydsTSBAccount setAccountNumber: [[html substringWithRange:[checkingResult rangeAtIndex:4]] trimmedString]];
-                                  
+
                                   // Balance
                                   NSString *accountBalance = [[html substringWithRange:[checkingResult rangeAtIndex:5]] trimmedString];
+                                  if( [accountBalance characterAtIndex:0] == '<' ){
+                                      accountBalance = [accountBalance stringByMatchingPattern:@"<[^>]+>(.*)" range:1];
+                                  }
+
                                   accountBalance = [accountBalance stringByReplacingOccurrencesOfString: @"[^\\d.]"
                                                                                              withString: @""
                                                                                                 options: NSRegularExpressionSearch
