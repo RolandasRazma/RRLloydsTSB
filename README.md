@@ -10,7 +10,7 @@ RRLloydsTSB *lloydsTSB = [[RRLloydsTSB alloc] initWithUser: account
                                                     secret: secret];
             
 // List accounts
-[_lloydsTSB accounts: ^(NSArray *accounts, NSError *error) {
+[lloydsTSB accounts: ^(NSArray *accounts, NSError *error) {
     if( error ){
         NSLog(@"NSError: %@", error.description);
         return;
